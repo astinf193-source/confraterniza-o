@@ -51,11 +51,11 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:0 20px 30px}
   <div class="layout">
     <section class="panel">
       <h2>Registre sua preferência</h2>
-      <p class="sub">Escolha uma opção em cada pergunta. É permitido atualizar sua votação enviando novamente com o mesmo nome.</p>
+      <p class="sub">Escolha uma opção em cada pergunta. Se precisar corrigir suas respostas, envie novamente usando o mesmo nome.</p>
       <form id="voteForm">
         <div class="field">
           <label for="personName">Seu nome completo</label>
-          <input id="personName" name="nome" type="text" maxlength="100" placeholder="Digite seu nome" required autocomplete="name">
+          <input id="personName" name="nome" type="text" maxlength="100" placeholder="Ex.: Marcelo" required autocomplete="name">
         </div>
         <div id="polls"></div>
         <button class="primary" id="submitBtn" type="submit">Enviar minha votação</button>
@@ -81,18 +81,18 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw8aQ2Mao5voOAEfORkjJSs
 // Personalize as opções abaixo antes de publicar no GitHub.
 const QUESTIONS = [
   {key:"data", title:"1. Qual a melhor data?", hint:"Escolha a data em que você tem disponibilidade.", options:[
-    "05/12/2026 – Sábado","06/12/2026 – Domingo","12/12/2026 – Sábado","13/12/2026 – Domingo","Outra data / tenho flexibilidade"
-  ]},
+    "11/12/2026 – Sexta-feira","18/12/2026 – Sexta-feira","Outra data"
+  ], extra:{type:"date", key:"dataOutra", label:"Se escolheu outra data, informe a data:"}},
   {key:"local", title:"2. Onde prefere realizar?", hint:"Vamos considerar estrutura, conforto e custo.", options:[
-    "Chácara / espaço de eventos","Restaurante","Clube","Casa de eventos com piscina","Outro local / sem preferência"
-  ]},
-  {key:"formato", title:"3. Qual formato prefere?", hint:"O formato será definido considerando o orçamento.", options:[
-    "Buffet completo (comida e bebidas)","Churrasco com serviço contratado","Churrasco organizado pelo grupo","Restaurante com consumo individual","Buffet com bebidas pagas à parte"
+    "Chácara / espaço de eventos","Restaurante","Clube","Casa de eventos com piscina","Outro local"
+  ], extra:{type:"text", key:"localSugestao", label:"Tem alguma sugestão de local? Informe o nome ou endereço (opcional):", placeholder:"Digite sua sugestão de local"}},
+  {key:"formato", title:"3. Qual formato prefere?", hint:"O formato será definido considerando o orçamento. Nas opções indicadas, bebidas alcoólicas serão pagas à parte.", options:[
+    "Buffet completo (comida e bebidas)","Churrasco com serviço contratado","Churrasco organizado pelo grupo (bebidas alcoólicas pagas à parte)","Restaurante com consumo individual","Buffet (bebidas alcoólicas pagas à parte)"
   ]},
   {key:"contribuicao", title:"4. Qual contribuição considera adequada?", hint:"Valor individual estimado; a decisão final dependerá dos orçamentos.", options:[
     "R$ 50,00","R$ 70,00","R$ 100,00","R$ 120,00","R$ 150,00 ou mais"
   ]},
-  {key:"acompanhantes", title:"5. Você pretende levar acompanhante(s)?", hint:"Informe a quantidade total de acompanhantes.", options:[
+  {key:"acompanhantes", title:"5. Você pretende levar acompanhante(s)?", hint:"Cada acompanhante também deverá pagar a contribuição. Informe a quantidade total de acompanhantes.", options:[
     "Não, irei sozinho(a)","Sim, 1 acompanhante","Sim, 2 acompanhantes","Sim, 3 ou mais acompanhantes","Ainda não sei"
   ]}
 ];
@@ -107,10 +107,27 @@ function renderQuestions(){
     <fieldset class="poll-card field" style="border:1px solid var(--line);min-width:0">
       <legend style="font-weight:800;padding:0">${q.title}</legend>
       <p class="hint">${q.hint}</p>
-      <div class="options">${q.options.map((opt,i)=>`
+      <div class="options">${q.options.map(opt=>`
         <label class="option"><input type="radio" name="${q.key}" value="${escapeHtml(opt)}" required><span>${escapeHtml(opt)}</span></label>
       `).join("")}</div>
+      ${q.extra ? `<div class="conditional-extra" id="extra-${q.key}" style="display:none;margin-top:12px">
+        <label for="${q.extra.key}" style="display:block;font-size:13px;font-weight:700;margin-bottom:7px">${q.extra.label}</label>
+        <input id="${q.extra.key}" name="${q.extra.key}" type="${q.extra.type}" ${q.extra.placeholder ? `placeholder="${q.extra.placeholder}"` : ""} style="width:100%;border:1px solid #cbd6e2;border-radius:11px;padding:11px 12px;font:inherit">
+      </div>` : ""}
     </fieldset>`).join("");
+  QUESTIONS.filter(q=>q.extra).forEach(q=>{
+    pollsEl.querySelectorAll(`input[name="${q.key}"]`).forEach(radio=>{
+      radio.addEventListener("change",()=>{
+        const chosen=pollsEl.querySelector(`input[name="${q.key}"]:checked`);
+        const extra=document.getElementById(`extra-${q.key}`);
+        const show=!!chosen && chosen.value===q.options[q.options.length-1];
+        extra.style.display=show?"block":"none";
+        const input=extra.querySelector("input");
+        input.required=show && q.extra.type==="date";
+        if(!show) input.value="";
+      });
+    });
+  });
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function showStatus(message,type){statusEl.textContent=message;statusEl.className="status "+type;}
@@ -149,6 +166,9 @@ form.addEventListener("submit",async e=>{
   if(!API_URL.startsWith("https://")){showStatus("Antes de votar, o administrador precisa configurar a URL do Google Apps Script no arquivo index.html.","err");return;}
   const fd=new FormData(form),payload={action:"vote",nome:String(fd.get("nome")||"").trim(),id:crypto.randomUUID()};
   QUESTIONS.forEach(q=>payload[q.key]=fd.get(q.key));
+  payload.dataOutra=String(fd.get("dataOutra")||"").trim();
+  payload.localSugestao=String(fd.get("localSugestao")||"").trim();
+  if(payload.data==="Outra data"&&!payload.dataOutra){showStatus("Informe a data no calendário.","err");return;}
   if(!payload.nome){showStatus("Informe seu nome.","err");return;}
   submitBtn.disabled=true;submitBtn.textContent="Enviando…";
   try{
