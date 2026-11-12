@@ -76,7 +76,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:0 20px 30px}
 <script>
 // 1) Depois de publicar o Google Apps Script como Aplicativo da Web,
 // cole aqui a URL terminada em /exec.
-const API_URL = "https://script.google.com/macros/s/AKfycbw8aQ2Mao5voOAEfORkjJSsjEfdVnMpxNbn3wNQ-jIU6K1sKZRYdg9X900hriMrzZoYDA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwKa8zASwskdVBg5BzUhh6o_w5CVudNA2BnAG0EWF1iUxNj_UAcuSG8jzIb7j_AMgGQTA/exec";
 
 // Personalize as opções abaixo antes de publicar no GitHub.
 const QUESTIONS = [
@@ -167,7 +167,7 @@ form.addEventListener("submit",async e=>{
   const fd=new FormData(form),payload={action:"vote",nome:String(fd.get("nome")||"").trim(),id:crypto.randomUUID()};
   QUESTIONS.forEach(q=>payload[q.key]=fd.get(q.key));
   payload.dataOutra=String(fd.get("dataOutra")||"").trim();
-  payload.localSugestao=String(fd.get("localSugestao")||"").trim();
+  payload.sugestaoLocal=String(fd.get("localSugestao")||"").trim();
   if(payload.data==="Outra data"&&!payload.dataOutra){showStatus("Informe a data no calendário.","err");return;}
   if(!payload.nome){showStatus("Informe seu nome.","err");return;}
   submitBtn.disabled=true;submitBtn.textContent="Enviando…";
